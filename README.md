@@ -646,3 +646,149 @@ public void update(Long itemId, Item updateParam) {
 ```
 
 open 이외에 나머지 필드도 업데이트 되도록 미리 넣어둡니다.
+
+
+
+# 7. 체크박스 - 멀티
+
+체크 박스를 멀티로 사용해서, 하나 이상을 체크할 수 있도록 해봅니다.
+
+- 등록 지역
+    - 서울, 부산, 제주
+    - 체크 박스로 다중 선택할 수 있다
+
+그런데 문제가 있다. 등록 폼, 상세화면, 수정 폼에서 모두 서울, 부산, 제주라는 체크 박스를 반복해서 보여주어야 한다. 이렇게 하려면 각각의 컨트롤러에서 `model.addAttribute(...)` 을 사용해서 체크 박스를 구성하는 데이터를 반복해서 넣어주어야 한다. 
+
+여러 페이지에 이런식으로 계속해서 각 url 매핑 메서드에 넣는 것은 너무 쓸데 없는 반복이다.
+
+스프링 MVC 에서는 이 반복을 하지 않도록 하기 위해 `@ModelAttribute` 기술을 사용할 수 있다.
+
+`FormItemController` - 추가
+
+```java
+@ModelAttribute("regions")
+public Map<String, String> regions() {
+    Map<String, String> regions = new LinkedHashMap<>();
+    regions.put("SEOUL", "서울");
+    regions.put("BUSAN", "부산");
+    regions.put("JEJU", "제주");
+    return regions;
+}
+```
+
+`@ModelAttribute`의 특별한 사용법
+
+ `@ModelAttribute` 는 이렇게 컨트롤러에 있는 별도의 메서드에 적용할 수 있다. 이렇게 하면 해당 컨트롤러를 요청할 때 `regions` 에서 반환한 값이 자동으로 모델( `model` )에 담기게 된다. 물론 이렇게 사용하지 않고, 각각의 컨트롤러 메서드에서 모델에 직접 데이터를 담아서 처리해도 된다.
+
+순서가 보장되는 `Map`  인 `LinkedHashMap` 을 사용하였다. 물론 성능 최적화를 하는 것은 고민해봐야 합니다. 해당 지역이 바뀌지 않는다면 `static` 영역에 `Map` 을 만들어 놓는 것이 더 좋을 것입니다.
+
+`addForm.html` - 추가
+
+```html
+<!--        multi checkbox-->
+<div>
+    <div>등록 지역</div>
+    <div th:each="region: ${regions}" class="form-check form-check-inline">
+        <input type="checkbox" th:field="*{regions}" th:value="${region.key}" class="form-check-input">
+        <label th:for="${#ids.prev('regions')}" th:text="${region.value}" class="form-check-label"> 서울 </label>
+    </div>
+</div>
+```
+
+`th:for="${#ids.prev('regions')}”`
+
+멀티 체크박스는 같은 이름의 여러 체크박스를 만들 수 있다. 그런데 문제는 이렇게 반복해서 HTML 태그를 생성할 때, 생성된 HTML 태그 속성에서 `name` 은 같아도 되지만, `id` 는 모두 달라야 한다. 따라서 타임리프는 체크박스를 `each` 루프 안에서 반복해서 만들 때 임의로 1 , 2 , 3 숫자를 뒤에 붙여준다.
+
+[http://localhost:8080/form/items/add](http://localhost:8080/form/items/add) 실행 결과, 페이지 소스 보기
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/f611cb22-afd4-439a-bd34-6a23d88d0270/Untitled.png)
+
+```html
+<!--        multi checkbox-->
+<div>
+    <div>등록 지역</div>
+    <div class="form-check form-check-inline">
+        <input type="checkbox" value="SEOUL" class="form-check-input" id="regions1" name="regions"><input type="hidden" name="_regions" value="on"/>
+        <label for="regions1" class="form-check-label">서울</label>
+    </div>
+    <div class="form-check form-check-inline">
+        <input type="checkbox" value="BUSAN" class="form-check-input" id="regions2" name="regions"><input type="hidden" name="_regions" value="on"/>
+        <label for="regions2" class="form-check-label">부산</label>
+    </div>
+    <div class="form-check form-check-inline">
+        <input type="checkbox" value="JEJU" class="form-check-input" id="regions3" name="regions"><input type="hidden" name="_regions" value="on"/>
+        <label for="regions3" class="form-check-label">제주</label>
+    </div>
+</div>
+```
+
+위처럼 `region1`, `region2`, `region3` 으로 id 가 만들어집니다.
+
+그렇다면 우리가 상품등록을 할 때 체크를 했을 때 정상적으로 동작하는지 로그를 찍어봅시다.
+
+`FormItemController.addItem()` 에 코드 추가
+
+```java
+@PostMapping("/add")
+public String addItem(@ModelAttribute Item item, RedirectAttributes redirectAttributes) {
+    Item savedItem = itemRepository.save(item);
+    redirectAttributes.addAttribute("itemId", savedItem.getId());
+    redirectAttributes.addAttribute("status", true);
+    log.info("item.open={}", item.getOpen());
+    log.info("item.regions={}", item.getRegions());
+    return "redirect:/form/items/{itemId}";
+}
+```
+
+### 지역 서울, 부산, 제주 선택 시
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/0b30446f-5e68-41eb-820b-5980921aa0e0/Untitled.png)
+
+로그 메시지
+
+h.i.web.form.FormItemController : **item.open=false**
+
+h.i.web.form.FormItemController : **item.regions=[SEOUL, BUSAN, JEJU]**
+
+### 지역 선택을 하지 않았을 때
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/4bfca08c-a8e7-4c07-96c5-7aaf56319aa6/Untitled.png)
+
+h.i.web.form.FormItemController          : **item.open=false**
+h.i.web.form.FormItemController          : **item.regions=[]**
+
+`_regions` 는 앞서 설명한 기능입니다. 웹 브라우저에서 체크를 하나도 하지 않았을 때, 클라이언트가 서버에 아무런 데이터를 보내지 않는 것을 방지합니다. 참고로 `_regions` 조차 보내지 않으면 결과는 `null` 이 됩니다.
+
+`_regions` 가 체크박스 숫자만큼 생성될 필요는 없지만, 타임리프가 생성되는 옵션 수 만큼 생성해서 그런 것이니 무시해도 됩니다.
+
+`item.html` - 추가
+
+```html
+<!--        multi checkbox-->
+<div>
+    <div>등록 지역</div>
+    <div th:each="region: ${regions}" class="form-check form-check-inline">
+        <input type="checkbox" th:field="${item.regions}" th:value="${region.key}" class="form-check-input" disabled>
+        <label th:for="${#ids.prev('regions')}" th:text="${region.value}" class="form-check-label"> 서울 </label>
+    </div>
+</div>
+```
+
+주의: `item.html` 에는 `th:object` 를 사용하지 않았기 때문에 `th:field` 부분에 `${item.regions}` 으로 적어주어야 한다. `disabled` 를 사용해서 상품 상세에서는 체크 박스가 선택되지 않도록 했다
+
+### 타임리프의 체크 확인 `checked="checked"`
+
+멀티 체크 박스에서 등록 지역을 선택해서 저장하면, 조회시에 `checked` 속성이 추가된 것을 확인할 수 있다. 타임리프는 `th:field` 에 지정한 값과 `th:value` 의 값을 비교해서 체크를 자동으로 처리해준다.
+
+`editForm.html` - 추가 ( `addForm.html` 과 같다.)
+
+```html
+<!--        multi checkbox-->
+<div>
+    <div>등록 지역</div>
+    <div th:each="region: ${regions}" class="form-check form-check-inline">
+        <input type="checkbox" th:field="*{regions}" th:value="${region.key}" class="form-check-input">
+        <label th:for="${#ids.prev('regions')}" th:text="${region.value}" class="form-check-label"> 서울 </label>
+    </div>
+</div>
+```
