@@ -792,3 +792,126 @@ h.i.web.form.FormItemController          : **item.regions=[]**
     </div>
 </div>
 ```
+
+
+# 8. 라디오 버튼
+
+라디오 버튼은 여러 선택지 중에 하나를 선택할 때 사용할 수 있다. 이번시간에는 라디오 버튼을 자바 ENUM을 활용해서 개발해보자.
+
+- 상품 종류
+    - 도서, 식품, 기타
+    - 라디오 버튼으로 하나만 선택할 수 있다.
+
+`FormItemController` - 추가
+
+```java
+@ModelAttribute("itemTypes")
+public ItemType[] itemTypes(){
+    return ItemType.values();
+}
+```
+
+`itemTypes` 를 등록 폼, 조회, 수정 폼에서 모두 사용하므로 `@ModelAttribute` 의 특별한 사용법을 적용합니다.
+
+`ItemType.values()` 를 사용하면 해당 `ENUM`의 모든 정보를 배열로 반환한다. 예) `[BOOK, FOOD,ETC]`
+
+상품 등록 폼에 기능을 추가해보자.
+
+`addForm.html` - 추가
+
+```html
+<!--        radio button-->
+<div>
+    <div>상품 종류</div>
+    <div th:each="type: ${itemTypes}" class="form-check form-check-inline">
+        <input type="radio" th:field="*{itemType}" th:value="${type.name()}" class="form-check-input">
+        <label th:for="${#ids.prev('itemType')}" th:text="${type.description}" class="form-check-label">BOOK</label>
+    </div>
+</div>
+```
+
+실행 결과, 폼 전송
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/d900b00b-2c05-4e90-af0c-992f03de7582/Untitled.png)
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/b84ca86a-0f59-4d51-92fe-d512906d72b7/Untitled.png)
+
+```html
+itemType=BOOK // 도서 선택, 선택하지 않으면 아무 값도 넘어가지 않는다.
+```
+
+로그 추가
+
+```java
+@PostMapping("/add")
+public String addItem(@ModelAttribute Item item, RedirectAttributes redirectAttributes) {
+    Item savedItem = itemRepository.save(item);
+    redirectAttributes.addAttribute("itemId", savedItem.getId());
+    redirectAttributes.addAttribute("status", true);
+    log.info("item.open={}", item.getOpen());
+    log.info("item.regions={}", item.getRegions());
+    log.info("item.itemType={}", item.getItemType());
+
+    return "redirect:/form/items/{itemId}";
+}
+```
+
+실행 로그
+
+```html
+item.itemType=BOOK: 값이 있을 때
+item.itemType=null: 값이 없을 때
+```
+
+체크 박스는 수정시 체크를 해제하면 아무 값도 넘어가지 않기 때문에, 별도의 히든 필드로 이런 문제를 해결했다.
+
+라디오 버튼은 이미 선택이 되어 있다면, 수정시에도 항상 하나를 선택하도록 되어 있으므로 체크 박스와 달리 별도의 히든 필드를 사용할 필요가 없다.
+
+상품 상세와 수정에도 라디오 버튼을 넣어주자.
+
+`item.html`
+
+```html
+<!--    radio button-->
+<div>
+    <div>상품 종류</div>
+    <div th:each="type: ${itemTypes}" class="formcheck form-check-inline">
+        <input type="radio" th:field="${item.itemType}" th:value="${type.name()}" class="form-check-input" disabled>
+        <label th:for="${#ids.prev('itemType')}" th:text="${type.description}" class="form-check-label">BOOK</label>
+    </div>
+</div>
+```
+
+주의: `item.html` 에는 `th:object` 를 사용하지 않았기 때문에 `th:field` 부분에 `${item.itemType}` 으로 적어주어야 한다.
+
+`disabled` 를 사용해서 상품 상세에서는 라디오 버튼이 선택되지 않도록 했다.
+
+`editForm.html`
+
+```html
+<!--        radio button-->
+<div>
+    <div>상품 종류</div>
+    <div th:each="type: ${itemTypes}" class="form-check form-check-inline">
+        <input type="radio" th:field="*{itemType}" th:value="${type.name()}" class="form-check-input">
+        <label th:for="${#ids.prev('itemType')}" th:text="${type.description}"
+               class="form-check-label">BOOK</label>
+    </div>
+</div>
+```
+
+선택한 식품( `FOOD` )에 `checked="checked"` 가 적용된 것을 확인할 수 있다.
+
+### 타임리프에서 ENUM 직접 사용하기
+
+위애서 만든 `FormItemController` 의 `itemTypes()` 메서드에서처럼 모델에 ENUM을 담아서 전달하는 대신에 타임리프는 자바 객체에 직접 접근할 수 있다.
+
+**타임리프에서 ENUM 직접 접근**
+
+```html
+<div th:each="type : ${T(hello.itemservice.domain.item.ItemType).values()}">
+```
+
+스프링EL 문법으로 `ENUM`을 직접 사용할 수 있다. `ENUM`에 `values()` 를 호출하면 해당 `ENUM`의 모든 정보가 배열로 반환된다.
+
+그런데 이렇게 사용하면 `ENUM`의 패키지 위치가 변경되거나 할때 자바 컴파일러가 타임리프까지 컴파일 오류를 잡을 수 없으므로 추천하지는 않는다.
