@@ -320,3 +320,107 @@ public String editForm(@PathVariable Long itemId, Model model) {
 쉽고 단순해서 크게 어려움이 없었을 것이다.
 
 사실 이것의 진짜 위력은 뒤에 설명할 검증(Validation)에서 나타난다. 이후 검증 부분에서 폼 처리와 관련된 부분을 더 깊이있게 알아보자.
+
+# 4. 요구사항 추가
+
+타임리프를 사용해서 폼에서 체크박스, 라디오 버튼, 셀렉트 박스를 편리하게 사용하는 방법을 학습해보자.
+
+기존 상품 서비스에 다음 요구사항이 추가되었다.
+
+- 판매 여부
+    - 판매 오픈 여부
+    - 체크박스로 선택할 수 있다.
+- 등록 지역
+    - 서울, 부산, 제주
+    - 체크박스로 다중 선택할 수 있다.
+- 상품 종류
+    - 도서, 식품, 기타
+    - 라디오 버튼으로 하나만 선택할 수 있다.
+- 배송 방식
+    - 빠른 배송
+    - 일반 배송
+    - 느린 배송
+    - 셀렉트 박스로 하나만 선택할 수 있다.
+
+### 예시 이미지
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/e3f24019-27b3-482d-b533-62ae285a5a14/Untitled.png)
+
+`ItemType` - 상품 종류
+
+```java
+package hello.itemservice.domain.item;
+
+public enum ItemType {
+
+    Book("도서"), FOOD("음식"), ETC("기타");
+
+    private final String description;
+
+    ItemType(String description) {
+        this.description = description;
+    }
+}
+```
+
+상품 종류는 `ENUM` 을 사용한다. 설명을 위해 `description` 필드를 추가했다.
+
+`DeliveryCode` - 배송 방식
+
+```java
+package hello.itemservice.domain.item;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
+/**
+ * FAST: 빠른 배송
+ * NORMAL
+ * SLOW
+ */
+@Data
+@AllArgsConstructor
+public class DeliveryCode {
+    private String code;
+    private String displayName;
+}
+```
+
+배송 방식은 `DeliveryCode` 라는 클래스를 사용한다. `code` 는 FAST 처럼 시스템에서 전달하는 값이고, `displayName` 은 빠른 배송 같은 고객에게 보여주는 값이다.
+
+`Item` - 상품
+
+```java
+package hello.itemservice.domain.item;
+
+import lombok.Data;
+
+import java.util.List;
+
+@Data
+public class Item {
+
+    private Long id;
+    private String itemName;
+    private Integer price;
+    private Integer quantity;
+
+    private String deliveryCode; // 배송 방식
+    private Boolean open; // 판매 여부
+    private List<String> regions;   // 등록 지역
+    private ItemType itemType; // 상품 종류
+
+    public Item() {
+    }
+
+    public Item(String itemName, Integer price, Integer quantity) {
+        this.itemName = itemName;
+        this.price = price;
+        this.quantity = quantity;
+    }
+}
+```
+
+ENUM , 클래스, String 같은 다양한 상황을 준비했다. 각각의 상황에 어떻게 폼의 데이터를 받을 수 있는지 하나씩 알아보자.
+
+`ItemRepository` 클래스는 이전 스프링 MVC 1편에서의 것을 그대로 사용합니다.
