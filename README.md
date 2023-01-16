@@ -424,3 +424,121 @@ public class Item {
 ENUM , 클래스, String 같은 다양한 상황을 준비했다. 각각의 상황에 어떻게 폼의 데이터를 받을 수 있는지 하나씩 알아보자.
 
 `ItemRepository` 클래스는 이전 스프링 MVC 1편에서의 것을 그대로 사용합니다.
+
+# 5. 체크박스 - 단일1
+
+단순 HTML 체크 박스
+
+`resources/templates/form/addForm.html` 추가
+
+```html
+<hr class="my-4">
+
+<!--        single checkbox-->
+  <div>판매 여부</div>
+  <div>
+      <div class="form-check">
+          <input type="checkbox" id="open" name="open" class="form-check-input" >
+          <label for="open" class="form-check-label" > 판매 오픈</label>
+      </div>
+  </div>
+```
+
+상품이 등록되는 곳에 다음과 같이 로그를 남겨서 값이 잘 넘어오는지 확인해보자.
+
+`FormItemController` 추가
+
+`FormItemController`  클래스 레벨에 `@Slf4j` 태그를 추가해주고, `addItem` 메서드에  아래 로그를 찍는 코드를 추가해줍니다.
+
+```java
+@PostMapping("/add")
+public String addItem(@ModelAttribute Item item, RedirectAttributes redirectAttributes) {
+    Item savedItem = itemRepository.save(item);
+    redirectAttributes.addAttribute("itemId", savedItem.getId());
+    redirectAttributes.addAttribute("status", true);
+    log.info("item.open={}", item.getOpen());
+    return "redirect:/form/items/{itemId}";
+}
+```
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/c5a70cb8-ccd2-4e3d-821d-078933eebb47/Untitled.png)
+
+[http://localhost:8080/form/items/4?status=true](http://localhost:8080/form/items/4?status=true)
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/6a5b12c8-6c07-45df-a139-e438b49e9954/Untitled.png)
+
+로그 메시지는 아래와 같이 표시되는 것을 확인할 수 있다.
+
+2023-01-16 15:19:56.381 INFO 5062 --- [nio-8080-exec-5] h.i.web.form.FormItemController : **item.open=true**
+
+f12 을 눌러서 페이지 정보를 보면 HTML Form 에는 `open = on` 이라는 값이 넘어가는 것을 알 수 있다.
+
+스프링은 on 이라는 문자를 true 타입으로 변환해준다.
+
+그런데 만약 판매 오픈 체크박스를 체크하지 않고 상품을 등록한다면 어떻게 될까요?
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/f532ef78-fe7b-4e27-a175-d93d42f1d57e/Untitled.png)
+
+로그 메시지는 아래와 같다.
+
+2023-01-16 15:28:10.868 INFO 5062 --- [nio-8080-exec-4] h.i.web.form.FormItemController : **item.open=null**
+
+위 그림처럼  클라이언트에서 서버로 아예 `open` 이라는 값을 보내지 않는다. 
+
+만약 우리가 판매 여부가 `true` 인 값을 다시 `false` 로 바꾸려는 의도로 상품 수정을 한다면 위와 같은 동작은 문제가 됩니다!
+
+스프링 MVC 는 특별한 기술을 사용하여 이런 문제를 해결합니다
+
+히든 필드를 하나 만들어서 `_open` 처럼 기존 체크박스 이름 앞에 언더바 를 붙여 전송하면 체크를 해제했다고 인식할 수 있습니다.
+
+히든 필드는 항상 전송됩니다. 따라서 위 예시처럼 체크를 해제한 경우 `open` 은 전송되지 않고 `_open` 만 전송되는며, 이 때 스프링 MVC 는 체크를 해제했다고 판단합니다.
+
+히든 필드를 사용하여 체크 해제를 하려면 아래 코드를 사용하면 됩니다.
+
+체크 해제를 인식하기 위한 히든 필드
+
+```html
+<input type="hidden" name="_open" value="on"/>
+```
+
+우리의 예제에서는 아래처럼 작성하면 되겠지요!
+
+```html
+<!--        single checkbox-->
+<div>판매 여부</div>
+<div>
+    <div class="form-check">
+        <input type="checkbox" id="open" name="open" class="form-check-input" >
+        <input type="hidden" name="_open" value="on"/>
+        <label for="open" class="form-check-label" > 판매 오픈</label>
+    </div>
+</div>
+```
+
+그렇다면 실행을 해봅시다.
+
+### 채크박스 체크시
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/ab59dcf0-2355-4ff9-9204-19829e401552/Untitled.png)
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/da18a92d-e339-46ae-9f7e-e4a0dcfec7bb/Untitled.png)
+
+체크박스를 체크하고 상품 등록을 하면 `open = on`  & `_open = on` 을 보내줍니다!
+
+로그메시지
+
+2023-01-16 15:36:23.494 INFO 5150 --- [nio-8080-exec-7] h.i.web.form.FormItemController : **item.open=true**
+
+### 체크 해제시
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/ec6daced-750b-41ea-8e06-4836ee033384/Untitled.png)
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/d6a51615-547d-416f-bcd1-220325b68fee/Untitled.png)
+
+체크박스를 체크하지 않고 보내면 `_open` 이라는 새로운 필드가 만들어져서 오직 `_open=on` 만이 넘어가는 것을 알 수 있습니다.
+
+로그메시지
+
+2023-01-16 15:34:02.951 INFO 5150 --- [nio-8080-exec-2] h.i.web.form.FormItemController : **item.open=false**
+
+그런데 이렇게 체크박스를 만들 때마다 히든 필드를 만들어야 하는 것은 너무 번거롭습니다. 그렇다면 어떻게 편하게 해결할 수 있을까요? 그 방법은 아래에서 바로 설명됩니다.
