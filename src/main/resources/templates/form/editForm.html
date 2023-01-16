@@ -21,8 +21,8 @@
     <form action="item.html" th:action th:object="${item}" method="post">
         <div>
             <label for="id">상품 ID</label>
-<!--            <input type="text" id="id" class="form-control" value="1" th:value="${item.id}" readonly>-->
-            <input type="text" id="id" th:field="*{id}" class="form-control"  readonly>
+            <!--            <input type="text" id="id" class="form-control" value="1" th:value="${item.id}" readonly>-->
+            <input type="text" id="id" th:field="*{id}" class="form-control" readonly>
         </div>
 
         <div>
@@ -42,6 +42,14 @@
         </div>
 
         <hr class="my-4">
+        <!--        single checkbox-->
+        <div>판매 여부</div>
+        <div>
+            <div class="form-check">
+                <input type="checkbox" id="open" th:field="*{open}" class="form-check-input">
+                <label for="open" class="form-check-label">판매 오픈 </label>
+            </div>
+        </div>
 
         <div class="row">
             <div class="col">
@@ -51,7 +59,8 @@
                 <button class="w-100 btn btn-secondary btn-lg"
                         onclick="location.href='item.html'"
                         th:onclick="|location.href='@{/form/items/{itemId}(itemId=${item.id})}'|"
-                        type="button">취소</button>
+                        type="button">취소
+                </button>
             </div>
         </div>
 

@@ -542,3 +542,107 @@ f12 을 눌러서 페이지 정보를 보면 HTML Form 에는 `open = on` 이라
 2023-01-16 15:34:02.951 INFO 5150 --- [nio-8080-exec-2] h.i.web.form.FormItemController : **item.open=false**
 
 그런데 이렇게 체크박스를 만들 때마다 히든 필드를 만들어야 하는 것은 너무 번거롭습니다. 그렇다면 어떻게 편하게 해결할 수 있을까요? 그 방법은 아래에서 바로 설명됩니다.
+
+
+# 6. 체크박스 - 단일2
+
+개발할 때 마다 위처럼 히든 필드를 추가하는 것은 상당히 번거롭습니다. 타임리프가 제공하는 폼 기능을 사용하면 이런 부분을 자동으로 처리할 수 있다.
+
+`resources/templates/form/addForm.html` 변경 (체크박스 코드 `th:field="*{open}"` )
+
+```html
+<!--        single checkbox-->
+<div>판매 여부</div>
+<div>
+    <div class="form-check">
+        <input type="checkbox" id="open" th:field="*{open}" class="form-check-input" >
+        <label for="open" class="form-check-label" > 판매 오픈</label>
+    </div>
+</div>
+```
+
+[http://localhost:8080/form/items/add](http://localhost:8080/form/items/add) 실행 후 페이지 소스 보기
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/d512f605-ed51-46ab-b6e5-e5855e0f9986/Untitled.png)
+
+44번 줄을 보면 자동으로  <input type=”hidden” name=”_open” value=”on” /> 이라는 필드를 추가해 주는 것을 확인할 수 있다!!!
+
+즉, 이전처럼 직접 히든 필드를 만들지 않아도 히든 필드 부분은 `th:field=”*{open}”` 이라는 타임리프 코드가 알아서 만들어 주는 것이다!!!
+
+그렇다면 상품 상세에도 적용해봅시다.
+
+`item.html`
+
+```html
+<hr class="my-4">
+<!--    single checkbox-->
+<div>판매여부</div>
+<div>
+    <div class="form-check">
+        <input type="checkbox" id="open" th:field="${item.open}" class="form-check-input" disabled>
+        <labe for="open" class="form-check-label">판매 오픈</labe>
+    </div>
+</div>
+```
+
+주의할 점은 현재 `item.html` 에는 `th:object` 를 사용하지 않았기 때문에 `th:field` 부분에 `${item.open}` 으로 적어주어야 합니다!!
+
+여기서는 `disabled` 를 사용해서 상품 상세에서는 체크 박스가 선택되지 않도록 했다.
+
+실행 후 상품 등록 시 판매 여부 체크박스를 체크하여 등록했다. 등록 후에는 상품 상세 화면으로 이동하게 된다.
+
+이 때 페이지 소스 보기를 하면 아래와 같다.
+
+```html
+<hr class="my-4">
+<!--    single checkbox-->
+<div>판매여부</div>
+<div>
+    <div class="form-check">
+        <input type="checkbox" id="open" class="form-check-input" disabled name="open" value="true" checked="checked">
+        <labe for="open" class="form-check-label">판매 오픈</labe>
+    </div>
+</div>
+```
+
+소스를 보면 `checked="checked"` 라는 속성이 추가된 것을 확인할 수 있습니다.
+
+이런 부분은 개발자가 직접 처리하려면 상당히 번거롭지만 `th:field` 를 사용한다면 값이 `true` 인 경우 체크를 자동으로 처리해줍니다!!!
+
+상품 수정에도 똑같이 적용해줍니다.
+
+`editForm.html`  에 추가
+
+```html
+<hr class="my-4">
+<!--        single checkbox-->
+<div>판매 여부</div>
+<div>
+    <div class="form-check">
+        <input type="checkbox" id="open" th:field="*{open}" class="form-check-input">
+        <label for="open" class="form-check-label">판매 오픈 </label>
+    </div>
+</div>
+```
+
+상품 수정도 `th:object` , `th:field` 를 모두 적용합니다.
+
+체크 박스를 수정해도 반영되도록  아래처럼 코드를 수정합니다.
+
+`ItemRepository` - `update()` 메서드 수정
+
+```java
+public void update(Long itemId, Item updateParam) {
+    Item findItem = findById(itemId);
+    findItem.setItemName(updateParam.getItemName());
+    findItem.setPrice(updateParam.getPrice());
+    findItem.setQuantity(updateParam.getQuantity());
+
+    findItem.setOpen(updateParam.getOpen());
+    findItem.setRegions(updateParam.getRegions());
+    findItem.setItemType(updateParam.getItemType());
+    findItem.setDeliveryCode(updateParam.getDeliveryCode());
+}
+```
+
+open 이외에 나머지 필드도 업데이트 되도록 미리 넣어둡니다.
