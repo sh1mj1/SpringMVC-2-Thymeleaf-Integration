@@ -915,3 +915,131 @@ item.itemType=null: 값이 없을 때
 스프링EL 문법으로 `ENUM`을 직접 사용할 수 있다. `ENUM`에 `values()` 를 호출하면 해당 `ENUM`의 모든 정보가 배열로 반환된다.
 
 그런데 이렇게 사용하면 `ENUM`의 패키지 위치가 변경되거나 할때 자바 컴파일러가 타임리프까지 컴파일 오류를 잡을 수 없으므로 추천하지는 않는다.
+
+
+# 9. 셀렉트 박스
+
+셀렉트 박스는 여러 선택지 중에 하나를 선택할 때 사용할 수 있다. 이번시간에는 셀렉트 박스를 자바 객체를 활용해서 개발해보자.
+
+- 배송 방식
+    - 빠른 배송
+    - 일반 배송
+    - 느린 배송
+    - 셀렉트 박스로 하나만 선택할 수 있다.
+
+`FormItemController` - 추가
+
+```java
+@ModelAttribute("deliveryCodes")
+public List<DeliveryCode> deliveryCodes() {
+    List<DeliveryCode> deliveryCodes = new ArrayList<>();
+    deliveryCodes.add(new DeliveryCode("FAST", "빠른 배송"));
+    deliveryCodes.add(new DeliveryCode("NORMAL", "일반 배송"));
+    deliveryCodes.add(new DeliveryCode("SLOW", "느린 배송"));
+    return deliveryCodes;
+}
+```
+
+`DeliveryCode` 라는 자바 객체를 사용하는 방법으로 진행하겠다.
+
+`DeliveryCode` 를 등록 폼, 조회, 수정 폼에서 모두 사용하므로 `@ModelAttribute` 의 특별한 사용법을 적용하자.
+
+참고: `@ModelAttribute` 가 있는 `deliveryCodes()` 메서드는 컨트롤러가 호출 될 때 마다 사용되므로 `deliveryCodes` 객체도 계속 생성된다. 이런 부분은 미리 생성해두고 재사용하는 것이 더 효율적이다.
+
+`addForm.html` - 추가
+
+```html
+<!-- SELECT -->
+<div>
+    <div>배송 방식</div>
+    <select th:field="*{deliveryCode}" class="form-select">
+        <option value="">==배송 방식 선택==</option>
+        <option th:each="deliveryCode : ${deliveryCodes}" th:value="${deliveryCode.code}"
+                th:text="${deliveryCode.displayName}">FAST
+        </option>
+    </select>
+</div>
+```
+
+[http://localhost:8080/form/items/add](http://localhost:8080/form/items/add) 실행 , 페이지 소스 보기(타임리프로 생성된 html)
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/e8dcc6d6-40d8-4513-bbab-674cef428157/Untitled.png)
+
+```html
+<!-- SELECT -->
+<div>
+    <div>배송 방식</div>
+    <select class="form-select" id="deliveryCode" name="deliveryCode">
+        <option value="">==배송 방식 선택==</option>
+        <option value="FAST">빠른 배송</option>
+        <option value="NORMAL">일반 배송</option>
+        <option value="SLOW">느린 배송</option>
+    </select>
+</div>
+
+<hr class="my-4">
+```
+
+주의: `item.html` 에는 `th:object` 를 사용하지 않았기 때문에 `th:field` 부분에 `${item.deliveryCode}` 으로 적어주어야 한다.
+
+`disabled` 를 사용해서 상품 상세에서는 셀렉트 박스가 선택되지 않도록 했다.
+
+상품 상세와 수정에도 셀렉트 박스를 넣어주자.
+
+`item.html`
+
+```html
+<!-- SELECT -->
+<div>
+    <div>배송 방식</div>
+    <select th:field="${item.deliveryCode}" class="form-select" disabled>
+        <option value="">==배송 방식 선택==</option>
+        <option th:each="deliveryCode : ${deliveryCodes}" th:value="${deliveryCode.code}"
+                th:text="${deliveryCode.displayName}">FAST
+        </option>
+    </select>
+</div>
+<hr class="my-4">
+```
+
+주의: `item.html` 에는 `th:object` 를 사용하지 않았기 때문에 `th:field` 부분에 `${item.deliveryCode}` 으로 적어주어야 한다. 
+
+`disabled` 를 사용해서 상품 상세에서는 셀렉트 박스가 선택되지 않도록 했다.
+
+`editForm.html`
+
+```html
+<!-- SELECT -->
+<div>
+    <div>배송 방식</div>
+    <select th:field="*{deliveryCode}" class="form-select">
+        <option value="">==배송 방식 선택==</option>
+        <option th:each="deliveryCode : ${deliveryCodes}" th:value="${deliveryCode.code}"
+                th:text="${deliveryCode.displayName}">FAST
+        </option>
+    </select>
+</div>
+<hr class="my-4">
+```
+
+[http://localhost:8080/form/items/1/edit](http://localhost:8080/form/items/1/edit) 실행 (페이지 소스 보기 → 타임리프로 생성된 html)
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/e7c19329-551c-42d2-87e3-cb86cf78a033/Untitled.png)
+
+```html
+<!-- SELECT -->
+<div>
+    <div>배송 방식</div>
+    <select class="form-select" id="deliveryCode" name="deliveryCode">
+        <option value="">==배송 방식 선택==</option>
+        <option value="FAST">빠른 배송</option>
+        <option value="NORMAL">일반 배송</option>
+        <option value="SLOW">느린 배송</option>
+    </select>
+</div>
+<hr class="my-4">
+```
+
+`selected="selected”`
+
+빠른 배송을 선택한 예시인데, 선택된 셀렉트 박스가 유지되는 것을 확인할 수 있다.
